@@ -63,6 +63,29 @@ class Incrementador(Elaboratable):
         return m
 """
 
+class Adder(Elaboratable):
+    def __init__(self, width):
+        self.a = Stream(width, name='a')
+        self.b = Stream(width, name='b')
+        self.r = Stream(width+1, name='r') # the result must have one bit more
+
+    def elaborate(self, platform):
+        m = Module()
+        sync = m.d.sync
+        comb = m.d.comb
+
+        with m.If(self.r.accepted()):
+            sync += self.r.valid.eq(0)
+
+        with m.If(self.a.accepted()): # for now I only use validation of a port
+            sync += [
+                self.r.valid.eq(1),
+                self.r.data.eq(self.a.data + self.b.data)
+            ]
+        comb += self.a.ready.eq((~self.r.valid) | (self.r.accepted()))
+        comb += self.b.ready.eq((~self.r.valid) | (self.r.accepted()))
+        return m
+
 # simulation block
 async def init_test(dut):
     cocotb.fork(Clock(dut.clk, 10, 'ns').start())
@@ -101,5 +124,46 @@ if __name__ == '__main__':
         ],
         vcd_file='incrementador.vcd'
     )
+"""
 
-""""
+
+
+@cocotb.test()
+async def burst(dut):
+    await init_test(dut)
+
+    stream_input_a = Stream.Driver(dut.clk, dut, 'a__')
+    stream_input_b = Stream.Driver(dut.clk, dut, 'b__')
+    stream_output = Stream.Driver(dut.clk, dut, 'r__')
+
+    N = 100
+    i = 0
+    width = len(dut.a__data)
+    mask = int('1' * width, 2)
+
+    data_a = [getrandbits(width) for _ in range(N)]
+    data_b = [getrandbits(width) for _ in range(N)]
+    critical_case = 2 ** (width) -1
+    data_a[0] = critical_case
+    data_b[0] = critical_case
+    cocotb.fork(stream_input_a.send(data_a))
+    cocotb.fork(stream_input_b.send(data_b))
+
+    while i <= N:
+        expected = data_a[i]+data_b[i]
+        recved = await stream_output.recv(N)
+        assert recved == expected
+
+
+if __name__ == '__main__':
+    core = Adder(5)
+    run(
+        core, 'adder',
+        ports=
+        [
+            *list(core.a.fields.values()),
+            *list(core.b.fields.values()),
+            *list(core.r.fields.values())
+        ],
+        vcd_file='./VCD/adder.vcd'
+    )
