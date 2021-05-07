@@ -40,7 +40,7 @@ class Stream(Record):
             self.ready <= 0
             return data
 
-
+""" Used from the example.py 
 class Incrementador(Elaboratable):
     def __init__(self, width):
         self.a = Stream(width, name='a')
@@ -61,8 +61,9 @@ class Incrementador(Elaboratable):
             ]
         comb += self.a.ready.eq((~self.r.valid) | (self.r.accepted()))
         return m
+"""
 
-
+# simulation block
 async def init_test(dut):
     cocotb.fork(Clock(dut.clk, 10, 'ns').start())
     dut.rst <= 1
@@ -70,7 +71,7 @@ async def init_test(dut):
     await RisingEdge(dut.clk)
     dut.rst <= 0
 
-
+""" Used from the example.py 
 @cocotb.test()
 async def burst(dut):
     await init_test(dut)
@@ -100,3 +101,5 @@ if __name__ == '__main__':
         ],
         vcd_file='incrementador.vcd'
     )
+
+""""
