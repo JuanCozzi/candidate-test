@@ -67,7 +67,7 @@ class Adder(Elaboratable):
     def __init__(self, width):
         self.a = Stream(width, name='a')
         self.b = Stream(width, name='b')
-        self.r = Stream(width+1, name='r') # the result must have one bit more
+        self.r = Stream(width, name='r') # the result must have one bit more
 
     def elaborate(self, platform):
         m = Module()
@@ -137,22 +137,32 @@ async def burst(dut):
     stream_output = Stream.Driver(dut.clk, dut, 'r__')
 
     N = 100
-    i = 0
+
     width = len(dut.a__data)
     mask = int('1' * width, 2)
-
-    data_a = [getrandbits(width) for _ in range(N)]
-    data_b = [getrandbits(width) for _ in range(N)]
+    data_to_a = [getrandbits(width) for _ in range(N)]
+    data_to_b = [getrandbits(width) for _ in range(N)]
+    data_to_r = []
+        
     critical_case = 2 ** (width) -1
-    data_a[0] = critical_case
-    data_b[0] = critical_case
-    cocotb.fork(stream_input_a.send(data_a))
-    cocotb.fork(stream_input_b.send(data_b))
+    data_to_a[0] = critical_case
+    data_to_b[0] = critical_case
 
-    while i <= N:
-        expected = data_a[i]+data_b[i]
-        recved = await stream_output.recv(N)
-        assert recved == expected
+    data_to_a[1] = 10
+    data_to_b[1] = -10
+    
+
+    for i in range(0,N):
+        data_to_r = data_to_r + [(data_to_a[i]+data_to_b[i]) & mask ]
+
+    expected = data_to_r
+
+    cocotb.fork(stream_input_a.send(data_to_a))
+    cocotb.fork(stream_input_b.send(data_to_b))
+
+    recved = await stream_output.recv(N)
+    assert recved == expected
+   
 
 
 if __name__ == '__main__':

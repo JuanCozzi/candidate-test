@@ -83,6 +83,7 @@ async def burst(dut):
     mask = int('1' * width, 2)
 
     data = [getrandbits(width) for _ in range(N)]
+    data[1] = 0b1111111
     expected = [(d + 1) & mask for d in data]
     cocotb.fork(stream_input.send(data))
     recved = await stream_output.recv(N)
@@ -98,5 +99,5 @@ if __name__ == '__main__':
             *list(core.a.fields.values()),
             *list(core.r.fields.values())
         ],
-        vcd_file='incrementador.vcd'
+        vcd_file='./VCD/incrementador.vcd'
     )
