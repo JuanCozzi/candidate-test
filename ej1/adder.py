@@ -20,7 +20,7 @@ class Stream(Record):
             self.valid = getattr(dut, prefix + 'valid')
             self.ready = getattr(dut, prefix + 'ready')
 
-        async def send(self, data): # to DUT
+        async def send(self, data):
             self.valid <= 1
             for d in data:
                 self.data <= d
@@ -29,7 +29,7 @@ class Stream(Record):
                     await RisingEdge(self.clk)
             self.valid <= 0
 
-        async def recv(self, count): # from DUT
+        async def recv(self, count):
             self.ready <= 1
             data = []
             for _ in range(count):
@@ -55,7 +55,7 @@ class Adder(Elaboratable):
         with m.If(self.r.accepted()):
             sync += self.r.valid.eq(0)
 
-        with m.If(self.a.accepted() & self.b.accepted()): 
+        with m.If(self.a.accepted()): # for now I only use validation of a port
             sync += [
                 self.r.valid.eq(1),
                 self.r.data.eq(self.a.data + self.b.data)
@@ -84,21 +84,25 @@ async def burst(dut):
 
     width = len(dut.a__data)
     mask = int('1' * width, 2)
-    data_a = [getrandbits(width) for _ in range(N)]
-    data_b = [getrandbits(width) for _ in range(N)]
-    expected = []
+    data_to_a = [getrandbits(width) for _ in range(N)]
+    data_to_b = [getrandbits(width) for _ in range(N)]
+    data_to_r = []
+        
+    critical_case = 2 ** (width) -1
+    data_to_a[0] = critical_case
+    data_to_b[0] = critical_case
 
-    # values ​​of interest    
-    critical_case = 2 ** (width)-1
-    data_a[0] = critical_case
-    data_b[0] = critical_case
+    data_to_a[1] = 10
+    data_to_b[1] = -10
+    
 
-    # use & mask with the sum becouse the overflow 
     for i in range(0,N):
-        expected = expected + [(data_a[i]+data_b[i]) & mask]
+        data_to_r = data_to_r + [(data_to_a[i]+data_to_b[i]) & mask ]
 
-    cocotb.fork(stream_input_a.send(data_a))
-    cocotb.fork(stream_input_b.send(data_b))
+    expected = data_to_r
+
+    cocotb.fork(stream_input_a.send(data_to_a))
+    cocotb.fork(stream_input_b.send(data_to_b))
 
     recved = await stream_output.recv(N)
     assert recved == expected
@@ -106,7 +110,7 @@ async def burst(dut):
 
 
 if __name__ == '__main__':
-    core = Adder(6)
+    core = Adder(5)
     run(
         core, 'adder',
         ports=
