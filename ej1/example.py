@@ -62,7 +62,6 @@ class Incrementador(Elaboratable):
         comb += self.a.ready.eq((~self.r.valid) | (self.r.accepted()))
         return m
 
-
 async def init_test(dut):
     cocotb.fork(Clock(dut.clk, 10, 'ns').start())
     dut.rst <= 1
