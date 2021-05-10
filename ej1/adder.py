@@ -55,7 +55,7 @@ class Adder(Elaboratable):
         with m.If(self.r.accepted()):
             sync += self.r.valid.eq(0)
 
-        with m.If(self.a.accepted()): # for now I only use validation of a port
+        with m.If(self.a.accepted() & self.b.accepted()): # for now I only use validation of a port
             sync += [
                 self.r.valid.eq(1),
                 self.r.data.eq(self.a.data + self.b.data)
