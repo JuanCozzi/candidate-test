@@ -79,34 +79,28 @@ async def burst(dut):
     stream_input_a = Stream.Driver(dut.clk, dut, 'a__')
     stream_input_b = Stream.Driver(dut.clk, dut, 'b__')
     stream_output = Stream.Driver(dut.clk, dut, 'r__')
-
     N = 100
 
     width = len(dut.a__data)
     mask = int('1' * width, 2)
-    data_to_a = [getrandbits(width) for _ in range(N)]
-    data_to_b = [getrandbits(width) for _ in range(N)]
-    data_to_r = []
+    data_a = [getrandbits(width) for _ in range(N)]
+    data_b = [getrandbits(width) for _ in range(N)]
+    expected = []
         
     critical_case = 2 ** (width) -1
-    data_to_a[0] = critical_case
-    data_to_b[0] = critical_case
-
-    data_to_a[1] = 10
-    data_to_b[1] = -10
+    data_a[0] = critical_case
+    data_b[0] = critical_case
+    data_a[1] = 10
+    data_b[1] = -10
     
-
     for i in range(0,N):
-        data_to_r = data_to_r + [(data_to_a[i]+data_to_b[i]) & mask ]
+        expected = expected + [(data_a[i]+data_b[i]) & mask ]
 
-    expected = data_to_r
-
-    cocotb.fork(stream_input_a.send(data_to_a))
-    cocotb.fork(stream_input_b.send(data_to_b))
+    cocotb.fork(stream_input_a.send(data_a))
+    cocotb.fork(stream_input_b.send(data_b))
 
     recved = await stream_output.recv(N)
     assert recved == expected
-   
 
 
 if __name__ == '__main__':

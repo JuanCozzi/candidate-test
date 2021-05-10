@@ -11,7 +11,7 @@ por el output de [nMigen](https://nmigen.info/nmigen/latest/). Puntualmente la i
 El script encargado del ejercicio se llama (`ej2.py`) y se deberá ejecutar de la sigiente manera: 
 
 ```
-python3 ej2.py -- in_file v_file_in.v  --out_file v_file_out.v 
+python3 ej2.py --in_file v_file_in.v  --out_file v_file_out.v 
 ```
 
 Siendo `v_file_in.v` y `v_file_out.v`definidos por el usuario. En el caso de no ingresar el nombre de archivo de entrada, utilizará el nombre por defecto `testcase.v` y si no se ingresa el nombre de archivo de salida, se utilizará el nombre del archivo original anteseguido del prefijo fix_, dando por resultado `fix_v_file_in.v`.
