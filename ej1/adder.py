@@ -55,12 +55,11 @@ class Adder(Elaboratable):
         with m.If(self.r.accepted()):
             sync += self.r.valid.eq(0)
 
-        with m.If(self.a.accepted()):
-            with m.If(self.b.accepted()): 
-                sync += [
-                    self.r.valid.eq(1),
-                    self.r.data.eq(self.a.data + self.b.data)
-                ]
+        with m.If(self.a.accepted() & self.b.accepted()):
+            sync += [
+                self.r.valid.eq(1),
+                self.r.data.eq(self.a.data + self.b.data)
+            ]
         comb += self.a.ready.eq((~self.r.valid) | (self.r.accepted()))
         comb += self.b.ready.eq((~self.r.valid) | (self.r.accepted()))
         return m
