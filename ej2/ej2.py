@@ -1,51 +1,62 @@
 import re
 import sys
+import argparse
+
+PATTERN = re.compile(r'(  reg \[(.*)\] (\S*) \[(.*)\];\n)*  initial begin\n((    \S*\[\S*\] = \S*;\n)*)  end\n')
 
 
-in_file = open(sys.argv[1],"r")
+def fix_file(file_contents, out_file):
+    '''
+        This function looks for the unsupported syntax 
+    type in the file_contents string and sets the correct syntax by creating
+    a .mem file for each memory record it finds. The inputs are the string 
+    file_contents and the name of the output file.
+    '''
+
+    # Number of memories
+    i = 0 
+
+    result = PATTERN.search(file_contents)
+
+    while result:
+        info = result.groups()
+        mem_name = info[2]
+        mem_file_name = 'memdump' + str(i) + '.mem'
+
+        fixed_syntax = info[0] + '  $readmemh(\"' + mem_file_name + '\", ' + mem_name + ');\n'
+        
+        # Search for the initial values of the memory
+        mem_values = re.findall(r"= 8'h(\w*);", info[4])
+
+        with open(mem_file_name,'w+') as mem_file:
+            for value in mem_values:
+                mem_file.write(value + '\n')
+
+        file_contents = file_contents[0:result.start()] + fixed_syntax + file_contents[result.end() ::]
+        result = PATTERN.search(file_contents)
+        i += 1
+
+    print(f'Modified memory blocks number: {i}')
+
+    with open(out_file_name, 'w') as out_file:
+        out_file.write(file_contents) 
 
 
-if len(sys.argv)>2:
-    out_file_name = ys.argv[2]
-else: 
-    out_file_name = "fix_" + sys.argv[1]
+if __name__ == '__main__':
+    
+    parser = argparse.ArgumentParser(description='EJ:2 ')
+    parser.add_argument('--in_file', default = 'testcase.v', 
+    help = 'Enter the in file name with its extension, default case \"testcase.v\"')
+    parser.add_argument('--out_file',help = 'Enter the out file name with its extension, default case \"fixed_>in_file<\"')
 
-out_file = open(out_file_name, "w+")
+    args = parser.parse_args()
 
+    out_file_name = args.out_file
 
-i = 0
-new_verilog = in_file.read()
+    if out_file_name is None:
+        out_file_name = 'fixed_' + args.in_file
 
-patron = re.compile(r"(  reg \[(.*)\] (\S*) \[(.*)\];\n)*  initial begin\n((    \S*\[\S*\] = \S*;\n)*)  end\n")
-result = patron.search(new_verilog)
+    with open(args.in_file, 'r') as in_file:
+        file_contents = in_file.read()
 
-while result:
-    info = result.groups()
-    mem_name = info[2]
-    mem_file_name = "memdump"+ str(i) + ".mem"
-    mem_file = open(mem_file_name,"w+")
-
-
-    remplace = info[0] +"  $readmemh(\"" + mem_file_name + "\", " + mem_name + ");\n"
-
-    print(result.group())
-    print(result.groups())
-
-
-    mem_numbers = re.findall(r"= 8'h(\w*);", info[4])
-
-    for numbers in mem_numbers:
-        mem_file.write(numbers +"\n")
-
-    new_verilog = new_verilog[0:result.start()] + remplace + new_verilog[result.end() ::]
-
-    patron = re.compile(r"(  reg \[(.*)\] (\S*) \[(.*)\];\n)*  initial begin\n((    \S*\[\S*\] = \S*;\n)*)  end\n")
-    result = patron.search(new_verilog)
-
-    i += 1
-
-
-
-print("Se modificaron: " + str(i) + "sintaxis")
-
-out_file.write(new_verilog)
+    fix_file(file_contents, out_file_name)

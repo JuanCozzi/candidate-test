@@ -11,11 +11,11 @@ por el output de [nMigen](https://nmigen.info/nmigen/latest/). Puntualmente la i
 El script encargado del ejercicio se llama (`ej2.py`) y se deberá ejecutar de la sigiente manera: 
 
 ```
-python3 ej2.py "v_file_in".v "v_file_out".v 
+python3 ej2.py -- in_file v_file_in.v  --out_file v_file_out.v 
 ```
 
-Siendo `"v_file_in".v` y `"v_file_out".v`definidos por el usuario. En el caso de no ingresar el nombre de salida del 
-archivo, utilizará el nombre del archivo original anteseguido del prefijo fix_, dando por resultado `fix_"v_file_in".v`.
+Siendo `v_file_in.v` y `v_file_out.v`definidos por el usuario. En el caso de no ingresar el nombre de archivo de entrada, utilizará el nombre por defecto `testcase.v` y si no se ingresa el nombre de archivo de salida, se utilizará el nombre del archivo original anteseguido del prefijo fix_, dando por resultado `fix_v_file_in.v`.
+
 
 
 
@@ -26,11 +26,10 @@ Para realizar una prueba del ejercicio es necesario obtener el output file gener
 ello se deberá ejecutar la siguiente linea:
 
 ```
-python3 generate.py generate "v_file_in".v
+python3 generate.py generate v_file_in.v
 ```
 
-Una vez ejecutado el script del ejercicio, este generará un archivo `"v_file_out".v` con la sintaxis soportada y otros archivos `memdump0.mem` correspondientes a los datos de inicialización de las memorias. Se generarán la cantidad de archivos `memdump0.mem`
-de acuerdo a la cantidad de inicializaciones de memoria posea el `"v_file_in".v` siendo flexible en el nombre que se le otorge. 
+Una vez ejecutado el script del ejercicio, este generará un archivo `v_file_out.v` con la sintaxis soportada y otros archivos `memdump0.mem` correspondientes a los datos de inicialización de las memorias. Se generarán la cantidad de archivos `memdump0.mem` de acuerdo a la cantidad de inicializaciones de memoria posea el `v_file_in.v` siendo flexible en el nombre que se le otorge. 
 
 
 
