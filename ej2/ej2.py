@@ -44,10 +44,10 @@ def fix_file(file_contents, out_file):
 
 if __name__ == '__main__':
     
-    parser = argparse.ArgumentParser(description='EJ:2 ')
+    parser = argparse.ArgumentParser(description='EJ:2 This script is responsible for modifying the nmigen output file by changing the syntax type of memory initializations. ')
     parser.add_argument('--in_file', default = 'testcase.v', 
     help = 'Enter the in file name with its extension, default case \"testcase.v\"')
-    parser.add_argument('--out_file',help = 'Enter the out file name with its extension, default case \"fixed_>in_file<\"')
+    parser.add_argument('--out_file',help = 'Enter the out file name with its extension, default case \"fixed_IN_FILE\"')
 
     args = parser.parse_args()
 
