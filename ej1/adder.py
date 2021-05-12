@@ -1,18 +1,17 @@
 from nmigen import *
 from nmigen_cocotb import run
 import cocotb
-from cocotb.triggers import RisingEdge, Timer
+from cocotb.triggers import RisingEdge
 from cocotb.clock import Clock
-from random import getrandbits
-
 
 class Stream(Record):
     def __init__(self, width, **kwargs):
-        Record.__init__(self, [('data', width), ('valid', 1), ('ready', 1)], **kwargs)
+        Record.__init__(
+            self, [('data', width), ('valid', 1), ('ready', 1)], **kwargs)
 
     def accepted(self):
         return self.valid & self.ready
-
+    
     class Driver:
         def __init__(self, clk, dut, prefix):
             self.clk = clk
@@ -20,6 +19,7 @@ class Stream(Record):
             self.valid = getattr(dut, prefix + 'valid')
             self.ready = getattr(dut, prefix + 'ready')
 
+        # To the adder
         async def send(self, data):
             self.valid <= 1
             for d in data:
@@ -29,6 +29,7 @@ class Stream(Record):
                     await RisingEdge(self.clk)
             self.valid <= 0
 
+        # From the adder
         async def recv(self, count):
             self.ready <= 1
             data = []
@@ -46,6 +47,7 @@ class Adder(Elaboratable):
         self.a = Stream(width, name='a')
         self.b = Stream(width, name='b')
         self.r = Stream(width, name='r')
+        self.aux = Signal(1)
 
     def elaborate(self, platform):
         m = Module()
@@ -54,17 +56,21 @@ class Adder(Elaboratable):
 
         with m.If(self.r.accepted()):
             sync += self.r.valid.eq(0)
+            comb += self.aux.eq(0)
 
-        with m.If(self.a.accepted() & self.b.accepted()):
-            sync += [
-                self.r.valid.eq(1),
-                self.r.data.eq(self.a.data + self.b.data)
-            ]
-        comb += self.a.ready.eq((~self.r.valid) | (self.r.accepted()))
-        comb += self.b.ready.eq((~self.r.valid) | (self.r.accepted()))
+        with m.If(self.a.valid & self.b.valid & self.r.ready):
+            sync += self.r.data.eq(self.a.data + self.b.data)
+            comb += self.aux.eq(1)
+        
+
+        with m.If(self.aux & self.a.accepted() & self.b.accepted()):
+            sync += self.r.valid.eq(1)
+
+        comb += self.a.ready.eq(self.a.valid & self.b.valid & self.aux)
+        comb += self.b.ready.eq(self.a.valid & self.b.valid & self.aux)       
         return m
 
-# simulation block
+# Simulation block
 async def init_test(dut):
     cocotb.fork(Clock(dut.clk, 10, 'ns').start())
     dut.rst <= 1
@@ -79,36 +85,60 @@ async def burst(dut):
     stream_input_a = Stream.Driver(dut.clk, dut, 'a__')
     stream_input_b = Stream.Driver(dut.clk, dut, 'b__')
     stream_output = Stream.Driver(dut.clk, dut, 'r__')
-    N = 100
-
-    width = len(dut.a__data)
-    mask = int('1' * width, 2)
-    data_a = [getrandbits(width) for _ in range(N)]
-    data_b = [getrandbits(width) for _ in range(N)]
-    expected = []
-        
-    critical_case = 2 ** (width) -1
-    data_a[0] = critical_case
-    data_b[0] = critical_case
-    data_a[1] = 10
-    data_b[1] = -10
     
-    for i in range(0,N):
-        expected = expected + [(data_a[i]+data_b[i]) & mask ]
+    width = len(dut.a__data)
+    N = (2 ** width-1)  
+    mask = int('1' * width, 2)
+    sign_a = [1+j for j in range(N)]
+    sign_b = [2 for _ in range(N)]
+    expected_1 = []
+    
+    # The first sign i expect
+    for i in range(0, N):
+        expected_1 = expected_1 + [(sign_a[i]+sign_b[i]) & mask]
+    # I must do the truncation (& mask) by the size of the variables
 
-    cocotb.fork(stream_input_a.send(data_a))
-    cocotb.fork(stream_input_b.send(data_b))
+    # For the validation test, I want to prove that if any of 
+    # the ports is not valid, the data is not lost. For that use the line
+    # "await RisingEdge(dut.clk)" delaying the sending of signals
 
-    recved = await stream_output.recv(N)
-    assert recved == expected
+    # Send the sign_a to the port a
+    cocotb.fork(stream_input_a.send(sign_a))
+
+    # wait a period
+    await RisingEdge(dut.clk)
+
+    # Send the sign_b to the port b
+    cocotb.fork(stream_input_b.send(sign_b))
+
+    # wait for the first output sign
+    recved_1 = await stream_output.recv(N)
+
+    # wait two periods
+    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+
+    # Swap the signals for test
+    # Send the sign_b to the port a
+    cocotb.fork(stream_input_b.send(sign_a))
+
+    # wait a period
+    await RisingEdge(dut.clk)
+    # Send the sign_b to the port a
+    cocotb.fork(stream_input_a.send(sign_b))
+
+    # wait for the second output sign
+    recved_2 = await stream_output.recv(N)
+
+    # Test codition formal verification
+    assert recved_1 + recved_2 == expected_1 + expected_1
 
 
 if __name__ == '__main__':
     core = Adder(5)
     run(
         core, 'adder',
-        ports=
-        [
+        ports=[
             *list(core.a.fields.values()),
             *list(core.b.fields.values()),
             *list(core.r.fields.values())
